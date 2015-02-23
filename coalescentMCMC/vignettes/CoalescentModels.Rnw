@@ -1,0 +1,290 @@
+\documentclass[a4paper]{article}
+%\VignetteIndexEntry{Coalescent Models}
+%\VignettePackage{coalescentMCMC}
+\usepackage[utf8]{inputenc}
+\usepackage{fancyvrb}
+\usepackage{color,natbib}
+
+\newcommand\tmrca{T_{\mathsf{MRCA}}}
+\newcommand{\code}{\texttt}
+\newcommand{\pkg}{\textsf}
+\newcommand{\coalmcmc}{\pkg{coalescentMCMC}}
+\newcommand{\pegas}{\pkg{pegas}}
+
+\author{Emmanuel Paradis}
+\title{Likelihood Function of Time-Dependent Coalescent Models}
+
+\begin{document}
+\maketitle
+
+<<echo=false,quiet=true>>=
+options(width=60)
+@
+
+\noindent Coalescent models describe the distribution of ancestry in a
+population under some assumptions on the variation in the parameter
+$\Theta = 2N\nu$, with $N$ the number of alleles in the population
+and $\nu$ the neutral mutation rate. The present document gives the likelihood
+function, and some computational details, for several models with
+$\Theta$ varying through time. These models are available in
+\coalmcmc\ as R functions (see below).
+
+The general mathematical framework has been given by Griffiths \&
+Tavaré \cite{Griffiths1994}.  If $\Theta$ is constant, the probability
+of observing the coalescent times $t_1, \dots, t_n$ is:
+
+\begin{displaymath}
+\prod_{i=2}^n {i \choose 2}\frac{1}{\Theta}
+\exp\left[-2{i \choose 2}\frac{t_i - t_{i-1}}{\Theta}\right]
+\end{displaymath}
+where $t_1=0$ is the present time and $t_n = \tmrca$.\footnote{Note
+that $2{i \choose 2} = i(i - 1)$ which is easier to calculate.} The
+general formula for $\Theta(t)$ varying through time is:
+
+\begin{equation}\label{eq:timecoal}
+\prod_{i=2}^n {i \choose 2}\frac{1}{\Theta(t_i)}
+\exp\left[-2{i \choose 2}\int_{t_{i-1}}^{t_i}\frac{1}{\Theta(u)}\mathrm{d}u\right]
+\end{equation}
+
+Four specific temporal models are considered below. The time to the
+most recent ancestor, denoted as $\tmrca$, is assumed to be
+known---this assumption could be relaxed though this is not considered here.
+
+\section{Models}
+
+The \emph{exponential growth model} assumes $\Theta(t) = \Theta_0
+e^{\rho t}$, with $\Theta_0$ is the value of $\Theta$ at present and
+$\rho$ is the population growth rate \cite{Kuhner1998}. Because of the
+exponential function, $\Theta$ may reach very high (or low) values. To
+avoid this, the \emph{linear model} formulated as $\Theta(t) =
+\Theta_0 + t(\Theta_{\tmrca} - \Theta_0)/{\tmrca}$. This model, like
+the previous one, has two free parameters: $\Theta_0$ and
+$\Theta_{\tmrca}$.
+
+The third model (\emph{step model}) assumes two constant values of
+$\Theta$ before and after a point in time denoted as $\tau$:
+
+\begin{displaymath}
+\Theta(t) = \left\{
+\begin{array}{lll}
+& \Theta_0 &\qquad t \le \tau\\
+& \Theta_1 &\qquad t > \tau
+\end{array} \right.
+\end{displaymath}
+
+The last model (\emph{exponential double growth model}) assumes that
+the population experienced two different phases of exponential growth:
+
+\begin{displaymath}
+\Theta(t) = \left\{
+\begin{array}{lll}
+& \Theta_0 e^{\rho_1 t} &\qquad t \le \tau\\
+& \Theta(\tau) e^{\rho_2(t - \tau)} = \Theta_0 e^{\rho_2 t + (\rho_1 - \rho_2)\tau}&\qquad t \ge \tau
+\end{array} \right.
+\end{displaymath}
+which reduces to the first model if $\rho_1 = \rho_2$. These two last
+models have three free parameters.
+
+\subsection{Constant-$\Theta$ Model}
+
+The log-likelihood is:
+
+\begin{displaymath}
+\ln L = \sum_{i=2}^n \ln {i \choose 2} - \ln\Theta -2{i \choose 2}\frac{t_i - t_{i-1}}{\Theta}.
+\end{displaymath}
+Its partial derivative with respect to $\Theta$ is:
+
+\begin{displaymath}
+\frac{\partial\ln L}{\partial\Theta} = \sum_{i=2}^n -\frac{1}{\Theta}
++ 2{i \choose 2}\frac{t_i - t_{i-1}}{\Theta^2},
+\end{displaymath}
+which, after setting $\partial\ln L/\partial\Theta = 0$ can be solved
+to find the maximum likelihood estimator (MLE):
+
+\begin{displaymath}
+\widehat{\Theta} = \frac{2}{n-1}\sum_{i=2}^n {i \choose 2}(t_i - t_{i-1}).
+\end{displaymath}
+
+Under the normal approximation of the likelihood function, the
+variance of $\hat{\Theta}$ is calculated through the second derivative
+of $\ln L$:
+
+\begin{displaymath}
+\frac{\partial^2\ln L}{\partial\Theta^2} = \sum_{i=2}^n \frac{1}{\Theta^2}
+- 4\times{i \choose 2}\frac{t_i - t_{i-1}}{\Theta^3},
+\end{displaymath}
+and:
+
+\begin{displaymath}
+\widehat{\mathrm{var}}(\widehat{\Theta}) =
+-\left[\frac{n-1}{\widehat{\Theta}^2} - \frac{4}{\widehat{\Theta}^3}
+\sum_{i=2}^n {i \choose 2}(t_i - t_{i-1})\right]^{-1}.
+\end{displaymath}
+This estimator is implemented in \pegas\ with the function \code{theta.tree}.
+
+\subsection{Exponential Growth Model}
+
+The integral in equation~(\ref{eq:timecoal}) is:
+
+\begin{displaymath}
+\int_{t_{i-1}}^{t_i}\frac{1}{\Theta(u)}\mathrm{d}u = -\frac{1}{\rho\Theta_0}
+(e^{-\rho t_i} - e^{-\rho t_{i-1}}),
+\end{displaymath}
+leading to the log-likelihood:
+
+\begin{displaymath}
+\ln L = \sum_{i=2}^n \ln{i \choose 2}- \ln\Theta_0 - \rho t_i+2{i \choose 2}\frac{1}{\rho\Theta_0}(e^{-\rho t_i} - e^{-\rho t_{i-1}}),
+\end{displaymath}
+with its first partial derivatives being:
+
+\begin{eqnarray*}
+\frac{\partial\ln L}{\partial\Theta_0} &=& \sum_{i=2}^n -\frac{1}{\Theta_0}-2{i \choose 2}\frac{1}{\rho\Theta_0^2}(e^{-\rho t_i} - e^{-\rho t_{i-1}}),\\
+\frac{\partial\ln L}{\partial\rho} &=& \sum_{i=2}^n -t_i + 2{i \choose
+  2}\frac{1}{\Theta_0}\left[-\frac{1}{\rho^2}(e^{-\rho t_i} - e^{-\rho
+    t_{i-1}}) + \frac{1}{\rho}(-t_i e^{-\rho t_i} + t_{i-1}e^{-\rho t_{i-1}})\right].
+\end{eqnarray*}
+These cannot be solved analytically to find the MLEs $\widehat{\Theta}_0$
+and $\hat{\rho}$ but they may be used to speed-up an optimization procedure
+with analytical gradients.
+
+\subsection{Linear Growth Model}
+
+Let $\kappa = (\Theta_{\tmrca} - \Theta_0)/\tmrca$, so $\Theta(t) =
+\Theta_0 + \kappa t$. The integral in equation~(\ref{eq:timecoal}) is:
+
+\begin{eqnarray*}
+\displaystyle\int_{t_{i-1}}^{t_i}\frac{1}{\Theta(u)}\mathrm{d}u &=&
+\displaystyle\frac{\ln(\Theta_0+\kappa t_i)}{\kappa} - \frac{\ln(\Theta_0+\kappa t_{i-1})}{\kappa}\\
+&=& \displaystyle\frac{1}{\kappa}\ln\frac{\Theta_0+\kappa t_i}{\Theta_0+\kappa t_{i-1}}.
+\end{eqnarray*}
+The log-likelihood is thus:
+
+\begin{displaymath}
+\ln L = \sum_{i=2}^n \ln{i \choose 2}-
+\ln(\Theta_0+\kappa t_i) - 2{i \choose 2}\frac{1}{\kappa}
+\ln\frac{\Theta_0+\kappa t_i}{\Theta_0+\kappa t_{i-1}}.
+\end{displaymath}
+The partial derivatives can be calculated analytically.
+
+\subsection{Step Model}
+
+It is easier to calculate the integral in equation~\ref{eq:timecoal}
+with the difference:
+
+\begin{equation}
+\int_{t_{i-1}}^{t_i}\frac{1}{\Theta(u)}\mathrm{d}u =
+\int_0^{t_i}\frac{1}{\Theta(u)}\mathrm{d}u -
+\int_0^{t_{i-1}}\frac{1}{\Theta(u)}\mathrm{d}u.\label{eq:intpart}
+\end{equation}
+The integral from the origin is:
+
+\begin{displaymath}
+\int_0^t\frac{1}{\Theta(u)}\mathrm{d}u = \left\{
+\begin{array}{lll}
+&\displaystyle\frac{t}{\Theta_0} &\qquad t \le \tau\\
+&\displaystyle\frac{\tau}{\Theta_0} + \frac{t - \tau}{\Theta_1}
+&\qquad t > \tau.
+\end{array} \right.
+\end{displaymath}
+This is then plugged into equation~\ref{eq:timecoal} with a simple
+Dirac delta function.
+%So the integral in equation~\ref{eq:timecoal} is:
+%
+%\begin{displaymath}
+%\int_{t_{i-1}}^{t_i}\frac{1}{\Theta(u)}\mathrm{d}u = \left\{
+%\begin{array}{lll}
+%&\displaystyle\frac{t_i - t_{i-1}}{\Theta_0} &\qquad t_{i-1} < t_i \le \tau\\
+%&\displaystyle\frac{\tau - t_{i-1}}{\Theta_0} + \frac{t_i - \tau}{\Theta_1}
+%&\qquad t_{i-1} \le \tau < t_i\\
+%&\displaystyle\frac{t_i - t_{i-1}}{\Theta_1} &\qquad \tau < t_{i-1} < t_i.
+%\end{array} \right.
+%\end{displaymath}
+
+\subsection{Exponential Double Growth Model}
+
+In this model the inverse of $\Theta(t)$ is:
+
+\begin{displaymath}
+\frac{1}{\Theta(t)} = \left\{
+\begin{array}{lll}
+&\displaystyle\frac{e^{-\rho_1 t}}{\Theta_0}&\qquad t \le \tau\\
+&\displaystyle\frac{e^{-\rho_2 t - (\rho_1 - \rho_2)\tau}}{\Theta_0}&\qquad t \ge \tau
+\end{array} \right.
+\end{displaymath}
+Again, it is easier to calculate the integral in equation~(\ref{eq:timecoal})
+with equation~(\ref{eq:intpart}). The integral from the origin is:
+
+\begin{displaymath}
+\int_0^t\frac{1}{\Theta(u)}\mathrm{d}u = \left\{
+\begin{array}{lll}
+&\displaystyle-\frac{1}{\rho_1\Theta_0}(e^{-\rho_1 t} - 1) &\quad t \le \tau\\
+&\displaystyle-\frac{1}{\rho_1\Theta_0}(e^{-\rho_1\tau} - 1) -
+\frac{1}{\rho_2\Theta_0}[e^{-\rho_2 t - (\rho_1 - \rho_2)\tau} - e^{-\rho_1\tau}]
+&\quad t\ge\tau
+\end{array} \right.
+\end{displaymath}
+This is then plugged into equation~(\ref{eq:timecoal}) with a simple
+Dirac delta function.
+
+\section{Simulation of Coalescent Times}
+
+It is generally possible to simulate coalescent times from a
+time-dependent model by rescaling a set of coalescent times simulated
+with constant $\Theta$, denoted as $t$, with:
+
+\begin{displaymath}
+t' = \frac{\displaystyle\int_0^t\Theta(u)\mathrm{d}u}{\Theta(0)}.
+\end{displaymath}
+This gives for the exponential growth model \cite{Kuhner1998}:
+
+\begin{displaymath}
+t' = \frac{e^{\rho t} - 1}{\rho},
+\end{displaymath}
+for the linear growth model:
+
+\begin{displaymath}
+t' = t + t^2(\Theta_{\tmrca}/\Theta_0 - 1)/{\tmrca},
+\end{displaymath}
+for the step model:
+
+\begin{displaymath}
+t' = \tau + (t - \tau)\Theta_1/\Theta_0\qquad \mathrm{if}\ t > \tau,
+\end{displaymath}
+and for the exponential double growth model:
+
+\begin{displaymath}
+t' = \left\{
+\begin{array}{lll}
+&\displaystyle\frac{e^{\rho_1 t} - 1}{\rho_1} &\qquad t \le \tau\\
+&\displaystyle\frac{e^{\rho_1 \tau} - 1}{\rho_1}+\frac{e^{\rho_2 t + (\rho_1 - \rho_2)\tau} - e^{\rho_1\tau}}{\rho_2}
+&\qquad t \ge \tau
+\end{array} \right.
+\end{displaymath}
+
+\section{Implementation in \coalmcmc}
+
+Five functions are available in \coalmcmc\ which compute the
+likelihood of the constant-$\Theta$ model as well as the four above
+ones:
+
+\begin{Verbatim}[formatcom=\color{blue}]
+dcoal(phy, theta, log = FALSE)
+dcoal.time(phy, theta0, rho, log = FALSE)
+dcoal.linear(phy, theta0, thetaT, TMRCA, log = FALSE)
+dcoal.step(phy, theta0, theta1, tau, log = FALSE)
+dcoal.time2(phy, theta0, rho1, rho2, tau, log = FALSE)
+\end{Verbatim}
+The two arguments common to all functions are:
+
+\begin{description}
+\item[\code{phy}:] a tree as an object of class \code{"phylo"};
+\item[\code{log}:] a logical value, if \code{TRUE} the values are
+  returned log-transformed which is recommended for computing
+  log-likelihoods.
+\end{description}
+The other arguments are the parameters of the models.
+
+\bibliographystyle{plain}
+\bibliography{coalescentMCMC}
+
+\end{document}
