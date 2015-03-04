@@ -1,13 +1,10 @@
 Package: coalescentMCMC
-Version: 0.4-0.1
-Date: 2014-08-01
+Version: 0.4-1
+Date: 2015-03-03
 Title: MCMC Algorithms for the Coalescent
 Authors@R: c(person("Emmanuel", "Paradis", role = c("aut", "cre", "cph"), email = "Emmanuel.Paradis@ird.fr"))
-Depends: ape, coda
+Depends: ape, coda, lattice
 Imports: Matrix, phangorn, stats
 ZipData: no
-Description: coalescentMCMC provides a flexible framework for
-  coalescent analyses in R. It includes a main function running the
-  MCMC algorithm, auxiliary functions for tree rearrangement, and some
-  functions to compute population genetic parameters.
+Description: Flexible framework for coalescent analyses in R. It includes a main function running the  MCMC algorithm, auxiliary functions for tree rearrangement, and some functions to compute population genetic parameters.
 License: GPL (>= 2)

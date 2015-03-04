@@ -208,6 +208,7 @@ summary(logLik1)
 A conditional histogram shows the two distributions:
 
 <<fig=true>>=
+library(lattice)
 print(histogram(~c(logLik0, logLik1) | gl(2, 100, labels = c("H0", "H1"))))
 @ 
 Since the increase in log-likelihood for the second model is about 8, the LRT comparing both models is $\chi^2_1 \approx 16$ which is highly significant ($P \approx 6 \times 10^{-5}$). This suggests that the population of woodmice (\textit{Apodemus sylvaticus}) from where these sequences have been sampled has expanded (reminding that in coalescent models the time scale is reversed so a negative value of $\rho$ means that the population has expanded).
