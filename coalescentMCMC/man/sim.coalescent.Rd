@@ -2,8 +2,9 @@
 \alias{sim.coalescent}
 \title{Coalescent Simulation and Visualisation}
 \description{
-  This is pedagogic function to show what is the coalescent in a simple
-  population model with discrete generations and asexual reproduction.
+  This is a pedagogic function to show what is the coalescent in a
+  simple population model with discrete generations and asexual
+  reproduction.
 }
 \usage{
 sim.coalescent(n = 5, TIME = 50, growth.rate = NULL, N.0 = 50, N.final = 20,
@@ -44,7 +45,7 @@ sim.coalescent(n = 5, TIME = 50, growth.rate = NULL, N.0 = 50, N.final = 20,
   This code was used to make the figures in Emerson et al. (2001).
 }
 \references{
-  Emerson, B., Paradis, E. and Thebaud C. (2001). Revealing the
+  Emerson, B., Paradis, E. and Thebaud, C. (2001). Revealing the
   demographic histories of species using DNA sequences. \emph{Trends in
     Ecology and Evolution}, \bold{16}, 707--716.
 }

@@ -1,8 +1,8 @@
-## sim.coalescent.R (2014-07-15)
+## sim.coalescent.R (2015-06-29)
 
 ##   Coalescent Simulation and Visualisation
 
-## Copyright 2014 Emmanuel Paradis
+## Copyright 2014-2015 Emmanuel Paradis
 
 ## This file is part of the R-package `coalescentMCMC'.
 ## See the file ../COPYING for licensing issues.
@@ -45,4 +45,21 @@ sim.coalescent <-
     }
     if (!is.null(pch))
         points(x, y, pch = pch, ...)
+}
+
+proba.coalescent <- function(t, N = 1e4, n = 2, exact = TRUE)
+{
+    n <- round(n)
+    if (exact) {
+        q <- prod(1 - 1:(n - 1)/N)
+        p <- 1 - q
+    } else {
+        p <- (n * (n - 1)/2)/N
+        q <- 1 - p
+    }
+    t <- round(t)
+    z <- t <= 0
+    res <- cbind(t, ifelse(z, 0, p * q^(t - 1)))
+    colnames(res) <- c("t (generations)", "Pr(coal)")
+    res
 }

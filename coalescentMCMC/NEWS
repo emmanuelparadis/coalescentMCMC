@@ -1,9 +1,19 @@
+		CHANGES IN coalescentMCMC VERSION 0.4-1.1
+
+
+NEW FEATURES
+
+    o The new function proba.coalescent calculates probabilities of
+      coalescence using exact or approximate formula.
+
+
+
 		CHANGES IN coalescentMCMC VERSION 0.4-1
 
 
 NEW FEATURES
 
-    o The new function sim.coalescent() simulates and visualises
+    o The new function sim.coalescent simulates and visualises
       coalescent for pedagogic purposes.
 
 

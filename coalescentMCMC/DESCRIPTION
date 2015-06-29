@@ -1,6 +1,6 @@
 Package: coalescentMCMC
-Version: 0.4-1
-Date: 2015-03-03
+Version: 0.4-1.1
+Date: 2015-06-29
 Title: MCMC Algorithms for the Coalescent
 Authors@R: c(person("Emmanuel", "Paradis", role = c("aut", "cre", "cph"), email = "Emmanuel.Paradis@ird.fr"))
 Depends: ape, coda, lattice

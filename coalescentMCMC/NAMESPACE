@@ -3,8 +3,8 @@ useDynLib(coalescentMCMC, .registration = TRUE)
 export(.coalescentMCMCenv, cleanMCMCtrees, coalescentMCMC, dcoal,
        dcoal.linear, dcoal.step, dcoal.time, dcoal.time2,
        EdgeLengthJittering, getLastTree, getMCMCstats, getMCMCtrees,
-       NeighborhoodRearrangement, saveMCMCtrees, sim.coalescent,
-       TipInterchange)
+       NeighborhoodRearrangement, proba.coalescent, saveMCMCtrees,
+       sim.coalescent, TipInterchange)
 
 importFrom(ape, as.phylo, branching.times, dist.dna, Ntip,
            reorder.phylo, write.nexus, write.tree)
