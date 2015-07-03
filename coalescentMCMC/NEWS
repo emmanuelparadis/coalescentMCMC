@@ -1,10 +1,15 @@
-		CHANGES IN coalescentMCMC VERSION 0.4-1.1
+		CHANGES IN coalescentMCMC VERSION 0.4-1.2
 
 
 NEW FEATURES
 
     o The new function proba.coalescent calculates probabilities of
       coalescence using exact or approximate formula.
+
+
+OTHER CHANGES
+
+    o Updated NAMESPACE file for r-devel.
 
 
 
