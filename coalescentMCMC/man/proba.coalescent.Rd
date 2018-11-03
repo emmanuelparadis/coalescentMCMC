@@ -26,7 +26,7 @@ proba.coalescent(t, N = 1e4, n = 2, exact = TRUE)
 proba.coalescent(1:10)
 ## the approximate formula doesn't work well when n is
 ## not small compared to N:
-f(1, 100, 50, exact = FALSE)
-f(1, 100, 50)
+proba.coalescent(1, 100, 50, exact = FALSE)
+proba.coalescent(1, 100, 50)
 }
 \keyword{datagen}

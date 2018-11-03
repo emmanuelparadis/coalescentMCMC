@@ -247,7 +247,7 @@ Other things that could be done with simple R commands include:
 \begin{itemize}
 \item Compute confidence intervals around $\hat{\Theta}_0$ and $\hat{\rho}$ (alternatively, posterior distributions of these parameters if a Bayesian sampling is done);
 \item Re-run the chain(s) with different initial trees, for instance to run branching chains taking a tree from \code{TR} or \code{TR2}.
-\item Use other other models of time-dependent coalescent (see the other vignette in this package).
+\item Use other models of time-dependent coalescent (see the other vignette in this package).
 \end{itemize}
 
 \bibliographystyle{plain}
