@@ -1,8 +1,8 @@
-## dcoal.R (2013-12-03)
+## dcoal.R (2018-11-08)
 
 ##   pdf of Various Time-Dependent Coalescent Models
 
-## Copyright 2012-2013 Emmanuel Paradis
+## Copyright 2012-2018 Emmanuel Paradis
 
 ## This file is part of the R-package `coalescentMCMC'.
 ## See the file ../COPYING for licensing issues.
@@ -23,7 +23,7 @@ dcoal.step <- function(phy, theta0, theta1, tau, log = FALSE)
     ## ... see paper for x > tau:
     F[!s] <- tau/theta0 + (x[!s] - tau)/theta1
     Ncomb <- choose(n:2, 2)
-    p <- sum(log(Ncomb) - log(f[-1]) - 2 * Ncomb * (F[-1] - F[-n]))
+    p <- sum(log(Ncomb) - log(f[-1]) - Ncomb * (F[-1] - F[-n]))
     if (!log) p <- exp(p)
     p
 }
@@ -41,7 +41,7 @@ dcoal.linear <- function(phy, theta0, thetaT, TMRCA, log = FALSE)
 
     ## the primitive of 1/f is log(f)/f'
     lnf <- log(f)
-    p <- sum(log(Ncomb) - lnf[-1] - 2 * Ncomb * (lnf[-1] - lnf[-n])/kappa)
+    p <- sum(log(Ncomb) - lnf[-1] - Ncomb * (lnf[-1] - lnf[-n])/kappa)
     if (!log) p <- exp(p)
     p
 }
@@ -69,7 +69,7 @@ dcoal.time2 <- function(phy, theta0, rho1, rho2, tau, log = FALSE)
     A <- exp(-rho1*tau)/theta0
     F[!s] <- -(A - 1/theta0)/rho1 - (f[!s] - A)/rho2
     Ncomb <- choose(n:2, 2)
-    p <- sum(log(Ncomb) + log(f[-1]) - 2 * Ncomb * (F[-1] - F[-n]))
+    p <- sum(log(Ncomb) + log(f[-1]) - Ncomb * (F[-1] - F[-n]))
     if (!log) p <- exp(p)
     p
 }
@@ -85,10 +85,10 @@ dcoal.time <- function(phy, theta0, rho, log = FALSE)
     n <- length(f)
     Ncomb <- choose(n:2, 2)
     ## the primitive of 'f' is '-f/rho'
-    p <- sum(log(Ncomb) + log(f[-1]) + 2 * Ncomb * (f[-1] - f[-n])/rho)
+    p <- sum(log(Ncomb) + log(f[-1]) + Ncomb * (f[-1] - f[-n])/rho)
 
-    gr.theta0 <- -(n - 1)/theta0 - sum(2 * Ncomb * (f[-1] - f[-n])/(theta0 * rho))
-    gr.rho <- sum(-x[-1] + 2 * Ncomb * (-(f[-1] - f[-n])/rho^2 + (x[-1]*f[-1] - x[-n]*f[-n])/rho))
+    gr.theta0 <- -(n - 1)/theta0 - sum(Ncomb * (f[-1] - f[-n])/(theta0 * rho))
+    gr.rho <- sum(-x[-1] + Ncomb * (-(f[-1] - f[-n])/rho^2 + (x[-1]*f[-1] - x[-n]*f[-n])/rho))
     if (log) attr(p, "gradient") <- c(gr.theta0, gr.rho)
     else p <- exp(p)
     p
@@ -97,13 +97,13 @@ dcoal.time <- function(phy, theta0, rho, log = FALSE)
 dcoal <- function(phy, theta, log = FALSE)
 ### this function is vectorized on 'theta'
 {
-    ## coalescent intervals from the oldest to most recent one:
-    x <- rev(diff(c(0, sort(branching.times(phy)))))
-    k <- 2:length(phy$tip.label)
+    ## coalescent intervals from the most recent to the oldest one:
+    x <- diff(c(0, sort(branching.times(phy))))
+    k <- length(phy$tip.label):2
     tmp <- k * (k - 1)/2 # choose(k, 2)
     tmp2 <- sum(x * tmp)
     sltmp <- sum(log(tmp))
-    p <- sltmp - length(k) * log(theta) - 2 * tmp2/theta
+    p <- sltmp - length(k) * log(theta) - tmp2/theta
     if (!log) p <- exp(p)
     p
 }
