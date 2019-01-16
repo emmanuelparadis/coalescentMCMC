@@ -1,16 +1,20 @@
-## coalescentMCMC.R (2013-12-13)
+## coalescentMCMC.R (2019-01-02)
 
 ##   Run MCMC for Coalescent Trees
 
-## Copyright 2012-2013 Emmanuel Paradis
+## Copyright 2012-2019 Emmanuel Paradis
 
 ## This file is part of the R-package `coalescentMCMC'.
 ## See the file ../COPYING for licensing issues.
 
-coalescentMCMC <-
-    function(x, ntrees = 3000, burnin = 1000, frequency = 1,
-             tree0 = NULL, model = NULL, printevery = 100)
+coalescentMCMC <- function(x, ntrees = 3000, burnin = 1000, frequency = 1,
+                           tree0 = NULL, model = "constant", printevery = 100,
+                           degree = 1, nknots = 0, knot.times = NULL,
+                           moves = 1:6)
 {
+    MODELS <- c("constant", "time", "step", "linear", "bsplines")
+    model <- match.arg(model, MODELS)
+    if (is.na(model)) stop(paste("model must one of:", MODELS))
     if (packageVersion("phangorn") >= "1.99.5") {
         edQt <- phangorn::edQt
         lli <- phangorn::lli
@@ -50,6 +54,13 @@ coalescentMCMC <-
         LL <- cbind(LL, params)
         colnames(LL) <- c("logLik", para.nms)
         LL <- mcmc(LL, start = 1, end = i)
+        class(LL) <- c("coalescentMCMC", "mcmc")
+        attr(LL, "model") <- model
+        attr(LL, "call") <- match.call()
+        if (model == "bsplines") {
+            attr(LL, "degree") <- degree
+            attr(LL, "nknots") <- nknots
+        }
         return(LL)
     })
 
@@ -57,15 +68,20 @@ coalescentMCMC <-
 
     if (is.null(tree0)) {
         d <- dist.dna(x, "JC69")
+        ## <FIXME> REMPLACER par upgma() et ajuster NAMESPACE
         tree0 <- as.phylo(hclust(d, "average"))
+        ## </FIXME>
     }
 
-    X <- phyDat(x)
+    ## <FIXME> preciser dans page d'aide
+    X <- if (inherits(x, "phyDat")) X else phyDat(x)
+    ## </FIXME>
     n <- length(tree0$tip.label)
     nodeMax <- 2*n - 1
     nOut <- ntrees
     nOut2 <- ntrees * frequency + burnin
 
+    ## log-lik of the tree given the genetic data
     getlogLik <- function(phy, X) pml(phy, X)$logLik
 
     if (packageVersion("phangorn") >= "1.99.5") {
@@ -89,57 +105,96 @@ coalescentMCMC <-
     lnL0 <- getlogLik(tree0, X)
     LL[1L] <- lnL0
 
-    if (is.null(model)) {
+    ## For each model, calculate:
+    ## np: number of parameters of the coalescent model
+    ## para.nms: names of these parameters (output in the "mcmc" object)
+    ## lo: lower bounds of these parameters (except for "constant" model)
+    ##     for nlminb()
+    ## up: id. for the upper bounds
+    ## getparams: a function that returns the coalescent parameters given a
+    ##            tree.............
+
+    switch(model, constant = {
         np <- 1L
         para.nms <- "theta"
         ## quantities to calculate THETA:
         two2n <- 2:n
-        K4theta <- length(two2n)
-        tmp <- two2n * (two2n - 1) # == 2 * choose(two2n, 2)
+        K4theta <- n - 1L
+        tmp <- two2n * (two2n - 1)/2 # choose(two2n, 2)
         getparams <- function(phy, bt) {
             x4theta <- rev(diff(c(0, sort(bt))))
             sum(x4theta * tmp)/K4theta
         }
-        f.theta <- function(t, p) p
-    } else {
-        switch(model, time = {
-            np <- 2L
-            para.nms <- c("theta0", "rho")
-            getparams <- function(phy, bt) { # 'bt' is not used but is needed to have the same arguments than above
-                halfdev <- function(p) {
-                    if (any(p <= 0) || any(is.nan(p))) return(1e100)
-                    -dcoal.time(phy, p[1], p[2], log = TRUE)
-                }
-                out <- nlminb(c(0.02, 0), halfdev)
-                out$par
+    }, time = {
+        np <- 2L
+        para.nms <- c("theta0", "rho")
+        lo <- c(0, -100)
+        up <- c(100, 100)
+        getparams <- function(phy, bt) { # 'bt' is not used but is needed to have the same arguments than above
+            halfdev <- function(p) {
+                if (any(is.nan(p))) return(1e100)
+                -dcoal.time(phy, p[1], p[2], log = TRUE)
             }
-            f.theta <- function(t, p) p[1] * exp(p[2] * t)
-        }, step = {
-            np <- 3L
-            para.nms <- c("theta0", "theta1", "tau")
-            getparams <- function(phy, bt) {
-                halfdev <- function(p) {
-                    if (any(p <= 0) || any(is.nan(p))) return(1e100)
-                    -dcoal.step(phy, p[1], p[2], p[3], log = TRUE)
-                }
-                out <- nlminb(c(0.02, 0.02, bt[1]/2), halfdev)
-                out$par
+            out <- nlminb(c(0.02, 0), halfdev, lower = lo, upper = up)
+            out$par
+        }
+    }, step = {
+        np <- 3L
+        para.nms <- c("theta0", "theta1", "tau")
+        getparams <- function(phy, bt) {
+            halfdev <- function(p) {
+                if (any(p <= 0) || any(is.nan(p))) return(1e100)
+                -dcoal.step(phy, p[1], p[2], p[3], log = TRUE)
             }
-            f.theta <- function(t, p) ifelse(t <= p[3], p[1], p[2])
-        }, linear = {
-            np <- 3L
-            para.nms <- c("theta0", "thetaT", "TMRCA")
-            getparams <- function(phy, bt) {
-                halfdev <- function(p) {
-                    if (any(p <= 0) || any(is.nan(p))) return(1e100)
-                    -dcoal.linear(phy, p[1], p[2], p[3], log = TRUE)
-                }
-                out <- nlminb(c(0.02, 0.02, bt[1]), halfdev)
-                out$par
+            out <- nlminb(c(0.02, 0.02, bt[1]/2), halfdev)
+            out$par
+        }
+    }, linear = {
+        np <- 3L
+        para.nms <- c("theta0", "thetaT", "TMRCA")
+        getparams <- function(phy, bt) {
+            halfdev <- function(p) {
+                if (any(p <= 0) || any(is.nan(p))) return(1e100)
+                -dcoal.linear(phy, p[1], p[2], p[3], log = TRUE)
             }
-            f.theta <- function(t, p) p[1] + t * (p[2] - p[1])/p[3]
-        })
-    }
+            out <- nlminb(c(0.02, 0.02, bt[1]), halfdev)
+            out$par
+        }
+    }, bsplines = {
+        free.knot.times <- TRUE
+        if (!is.null(knot.times)) {
+            nknots <- length(knot.times)
+            free.knot.times <- FALSE
+        }
+        np <- nknots + degree + 1L
+        if (free.knot.times) np <- np + nknots
+        para.nms <- paste0("b", 1:np)
+        getparams <- function(phy, bt) {
+            up <- rep(1e3, np)
+            lo <- -up
+            if (nknots) {
+                up[1:nknots] <- bt
+                lo[1:nknots] <- 0
+                ip <- c(1:nknots * bt/(nknots + 1), runif(np))
+            } else {
+                ip <- runif(np)
+            }
+            halfdev <- function(p) {
+                if (any(p <= 0) || any(is.nan(p))) return(1e100)
+                if (nknots) {
+                    knots <- p[1:nknots]
+                    beta <- p[-(1:nknots)]
+                } else {
+                    knots <- NULL
+                    beta <- p
+                }
+                -dcoal.bsplines(phy, beta, knots = knots, degree = degree, log = TRUE, bt)
+            }
+            out <- nlminb(ip, halfdev, lower = lo, upper = up)
+            out$par
+        }
+    })
+
     params <- matrix(0, nOut2, np)
 
     i <- 2L
@@ -158,28 +213,33 @@ coalescentMCMC <-
     bt0 <- branching.times(tree0)
     params[1L, ] <- para0 <- getparams(tree0, bt0)
 
-    nodesToSample <- (n + 2):nodeMax
+    getTHETAct <- function(phy, n, bt0) {
+        x4theta <- rev(diff(c(0, sort(bt0))))
+        tmp <- (2:n) * (2:n - 1)/2
+        K4theta <- n - 1L
+        sum(x4theta * tmp)/K4theta
+    }
 
     while (k < nOut) {
         if (verbose) if (! i %% printevery)
             cat("\r  ", i, "                ", j, "           ")
 
-        ## select one internal node excluding the root:
-        target <- sample(nodesToSample, 1L) # target node for rearrangement
-        THETA <- f.theta(bt0[target - n], para0) # the value of THETA at this node
-
-        tr.b <- NeighborhoodRearrangement(tree0, n, nodeMax, target, THETA, bt0)
-        ## do TipInterchange() every 10 steps:
-        ## tr.b <-
-        ##     if (! i %% 10) TipInterchange(tree0, n)
-        ##     else NeighborhoodRearrangement(tree0, n, nodeMax, target, THETA, bt0)
+        move <- sample(moves, 1L)
+        if (move == 1)
+            THETA <- ifelse(model == "constant", para0, getTHETAct(tree0, n, bt0))
+        tr.b <- switch(move,
+                       NeighborhoodRearrangement(tree0, n, THETA, bt0),
+                       TipInterchange(tree0, n),
+                       ScalingMove(tree0),
+                       branchSwapping(tree0, n, bt0),
+                       subtreeExchange(tree0, n, bt0),
+                       NodeAgeMove(tree0, n, bt0))
 
         if (!(i %% frequency) && i > burnin) {
             k <- k + 1L
             TREES[[k]] <- tr.b
         }
-        lnL.b <- getlogLik(tr.b, X)
-        LL[i] <- lnL.b
+        LL[i] <- lnL.b <- getlogLik(tr.b, X)
         ## calculate theta for the proposed tree:
         bt <- branching.times(tr.b)
         params[i, ] <- para <- getparams(tr.b, bt)

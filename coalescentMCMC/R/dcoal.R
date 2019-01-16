@@ -94,16 +94,35 @@ dcoal.time <- function(phy, theta0, rho, log = FALSE)
     p
 }
 
-dcoal <- function(phy, theta, log = FALSE)
-### this function is vectorized on 'theta'
+dcoal <- function (phy, theta, log = FALSE)
 {
-    ## coalescent intervals from the most recent to the oldest one:
-    x <- diff(c(0, sort(branching.times(phy))))
-    k <- length(phy$tip.label):2
-    tmp <- k * (k - 1)/2 # choose(k, 2)
+    x <- rev(diff(c(0, sort(branching.times(phy)))))
+    k <- 2:length(phy$tip.label)
+    tmp <- k * (k - 1)/2
     tmp2 <- sum(x * tmp)
     sltmp <- sum(log(tmp))
     p <- sltmp - length(k) * log(theta) - tmp2/theta
     if (!log) p <- exp(p)
     p
+}
+
+## bt: branching.times(phy)
+dcoal.bsplines <- function(phy, beta, knots = NULL, degree = 3, log = FALSE, bt)
+{
+    ## slightly faster than lchoose(n, 2) and equally vectorized:
+    f <- function(n) log(n) + log(n - 1) - 0.6931471805599452862268
+    ## coalescent times from the most recent to the oldest:
+    x <- c(0, sort(bt))
+    names(x) <- NULL
+    n <- length(x)
+    bsx <- bs(x, knots = knots, degree = degree, intercept = TRUE)
+    THETA <- drop(bsx %*% beta)
+    if (any(is.na(THETA) | !is.finite(THETA) | THETA < 0))
+        return(if (log) -1e100 else 0)
+    invTHETA <- 1/THETA
+    ## simple trapeze integrals:
+    INT <- (x[-1] - x[-n]) * (invTHETA[-1] + invTHETA[-n])/2
+    res <- sum(f(n:2) - log(THETA[-1]) - 0.5*(n:2)*((n - 1):1) * INT)
+    if (!log) res <- exp(res)
+    res
 }

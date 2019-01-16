@@ -2,7 +2,7 @@
 
 coalescentMCMC is an R package for coalescent analysis. It is distributed on CRAN:
 
-http://cran.r-project.org/web/packages/coalescentMCMC/index.html
+http://cran.r-project.org/package=coalescentMCMC
 
 This repository contains the current development (next to be on CRAN) version (-> coalescentMCMC/).
 
