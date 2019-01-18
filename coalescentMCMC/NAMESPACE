@@ -2,16 +2,19 @@ useDynLib(coalescentMCMC, .registration = TRUE)
 
 export(.coalescentMCMCenv, cleanMCMCtrees, coalescentMCMC, dcoal,
        dcoal.linear, dcoal.step, dcoal.time, dcoal.time2,
-       EdgeLengthJittering, getLastTree, getMCMCstats, getMCMCtrees,
-       NeighborhoodRearrangement, proba.coalescent, saveMCMCtrees,
-       sim.coalescent, TipInterchange)
+       getLastTree, getMCMCstats, getMCMCtrees,
+       NeighborhoodRearrangement, plotTHETA,
+       proba.coalescent, saveMCMCtrees,
+       sim.coalescent)
 
 importFrom(ape, as.phylo, branching.times, dist.dna, Ntip,
            reorder.phylo, write.nexus, write.tree)
 importFrom(coda, mcmc)
-importFrom(graphics, plot, points, segments)
-importFrom(phangorn, phyDat, pml)
+importFrom(graphics, axis, lines, mtext, plot, points, segments)
+importFrom(grDevices, col2rgb, rgb)
+importFrom(phangorn, phyDat, pml, upgma)
 importFrom(Matrix, Matrix)
-importFrom(stats, hclust, nlminb, rbinom, reorder, runif)
+importFrom(splines, bs)
+importFrom(stats, hclust, nlminb, pchisq, rbinom, reorder, runif)
 importFrom(lattice, histogram)
 importFrom(utils, packageVersion)

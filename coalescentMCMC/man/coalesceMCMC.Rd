@@ -5,6 +5,10 @@
 \alias{cleanMCMCtrees}
 \alias{getLastTree}
 \alias{getMCMCstats}
+\alias{logLik.coalescentMCMC}
+\alias{AIC.coalescentMCMC}
+\alias{BIC.coalescentMCMC}
+\alias{anova.coalescentMCMC}
 \title{Run MCMC for Coalescent Trees}
 \description{
   This function runs a Markov chain Monte Carlo (MCMC) algorithm to
@@ -25,20 +29,23 @@
   run during a session.
 }
 \usage{
-coalescentMCMC(x, ntrees = 3000, burnin = 1000, frequency = 1,
-               tree0 = NULL, model = NULL, printevery = 100)
+coalescentMCMC(x, ntrees = 3000, model = "constant", tree0 = NULL,
+               printevery = 100, degree = 1, nknots = 0,
+               knot.times = NULL, moves = 1:6)
 getMCMCtrees(chain = NULL)
 saveMCMCtrees(destdir = ".", format = "RDS", ...)
 cleanMCMCtrees()
 getLastTree(X)
 getMCMCstats()
+\method{logLik}{coalescentMCMC}(object, ...)
+\method{AIC}{coalescentMCMC}(object, ..., k = 2)
+\method{BIC}{coalescentMCMC}(object, ...)
+\method{anova}{coalescentMCMC}(object, ...)
 }
 \arguments{
   \item{x}{a set of DNA sequences, typically an object of class
     \code{"DNAbin"} or \code{"phyDat"}.}
   \item{ntrees}{the number of trees to output.}
-  \item{burnin}{the number of trees to discard as ``burn-in''.}
-  \item{frequency}{the frequency at which trees are sampled.}
   \item{tree0}{the initial tree of the chain; by default, a UPGMA
     tree with a JC69 distance is generated.}
   \item{model}{the coalescent model to be used for resampling. By
@@ -46,6 +53,9 @@ getMCMCstats()
   \item{printevery}{an integer specifying the frequency at which to
     print the numbers of trees proposed and accepted; set to 0 to cancel
     all printings.}
+  \item{degree, nknots, knot.times}{parameters used if \code{model =
+    "splines"}.}
+  \item{moves}{the tree moves used by the MCMC.}
   \item{chain}{an integer giving which lists of trees to extract}
   \item{destdir}{a character string giving the location where to save
     the files; by default, this is the current working directory.}
@@ -53,8 +63,11 @@ getMCMCstats()
     possible (cae-insensitive): \code{"RDS"}, \code{"Newick"},
     \code{"NEXUS"}, or any unambiguous abbreviation of these.}
   \item{\dots}{options passed to the function used to write the tree
-    files (see below).}
+    files (see below) or passed to other methods.}
   \item{X}{an bject of class \code{"multiPhylo"}.}
+  \item{object}{an bject of class \code{"coalescentMCMC"}.}
+  \item{k}{the coefficient used to calculate the AIC (see
+    \code{\link[stats]{AIC}}).}
 }
 \details{
   A simple MCMC algorithm is programmed using at each step the

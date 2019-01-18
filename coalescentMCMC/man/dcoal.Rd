@@ -12,21 +12,21 @@
   and various time-dependent models.
 }
 \usage{
-dcoal(phy, theta, log = FALSE)
-dcoal.step(phy, theta0, theta1, tau, log = FALSE)
-dcoal.linear(phy, theta0, thetaT, TMRCA, log = FALSE)
-dcoal.time(phy, theta0, rho, log = FALSE)
-dcoal.time2(phy, theta0, rho1, rho2, tau, log = FALSE)
+dcoal(bt, theta, log = FALSE)
+dcoal.step(bt, theta0, theta1, tau, log = FALSE)
+dcoal.linear(bt, theta0, thetaT, log = FALSE)
+dcoal.time(bt, theta0, rho, log = FALSE)
+dcoal.time2(bt, theta0, rho1, rho2, tau, log = FALSE)
 }
 \arguments{
-  \item{phy}{a tree of class \code{"phylo"}.}
+  \item{bt}{a vector of coalescent times (typically from
+    \code{\link[ape]{branching.times}}).}
   \item{theta}{population parameter THETA.}
   \item{log}{a logical value specifying whether the probabilities should
     be returned log-transformed.}
   \item{theta0, theta1, thetaT}{THETA parameter for the time-dependent
     models.}
   \item{tau}{breakpoint in time when the parameters change.}
-  \item{TMRCA}{time to most recent ancestor.}
   \item{rho, rho1, rho2}{population (exponential) growth rates.}
 }
 \details{
@@ -47,6 +47,6 @@ dcoal.time2(phy, theta0, rho1, rho2, tau, log = FALSE)
 }
 \author{Emmanuel Paradis}
 \seealso{
-  \code{\link{coalescentMCMC}}
+  \code{\link{coalescentMCMC}}, \code{\link[ape]{branching.times}}
 }
 \keyword{models}

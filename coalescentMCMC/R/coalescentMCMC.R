@@ -1,4 +1,4 @@
-## coalescentMCMC.R (2019-01-02)
+## coalescentMCMC.R (2019-01-18)
 
 ##   Run MCMC for Coalescent Trees
 
@@ -7,10 +7,9 @@
 ## This file is part of the R-package `coalescentMCMC'.
 ## See the file ../COPYING for licensing issues.
 
-coalescentMCMC <- function(x, ntrees = 3000, burnin = 1000, frequency = 1,
-                           tree0 = NULL, model = "constant", printevery = 100,
-                           degree = 1, nknots = 0, knot.times = NULL,
-                           moves = 1:6)
+coalescentMCMC <- function(x, ntrees = 3000, model = "constant",
+                           tree0 = NULL, printevery = 100, degree = 1,
+                           nknots = 0, knot.times = NULL, moves = 1:6)
 {
     MODELS <- c("constant", "time", "step", "linear", "bsplines")
     model <- match.arg(model, MODELS)
@@ -25,11 +24,12 @@ coalescentMCMC <- function(x, ntrees = 3000, burnin = 1000, frequency = 1,
 
     on.exit({
         if (packageVersion("phangorn") >= "1.99.5") pml.free()
-        if (k < nOut) {
-            if (!k) stop("burn-in period not yet finished")
-            TREES <- TREES[seq_len(k)]
-            LL <- LL[seq_len(i)]
-            params <- params[seq_len(i), ]
+        if (i < ntrees) {
+            one2i <- seq_len(i)
+            TREES <- TREES[one2i]
+            LL <- LL[one2i]
+            params <- params[one2i, ]
+            LLmod <- LLmod[one2i]
             warning(paste("MCMC interrupted after", i, "generations"))
         }
         ## compress the list of trees:
@@ -48,15 +48,17 @@ coalescentMCMC <- function(x, ntrees = 3000, burnin = 1000, frequency = 1,
         i <- i - 1L
 
         MCMCstats <- get("MCMCstats", envir = .coalescentMCMCenv)
-        MCMCstats[[suffix]] <- c(k, burnin, frequency, i, j)
+        MCMCstats[[suffix]] <- c(i, j)
         assign("MCMCstats", MCMCstats, envir = .coalescentMCMCenv)
 
-        LL <- cbind(LL, params)
-        colnames(LL) <- c("logLik", para.nms)
+        ## LLmod stores the half deviances, hence the minus sign:
+        LL <- cbind(LL, -LLmod, params)
+        colnames(LL) <- c("logLik.tree", "logLik.coal", para.nms)
         LL <- mcmc(LL, start = 1, end = i)
         class(LL) <- c("coalescentMCMC", "mcmc")
         attr(LL, "model") <- model
         attr(LL, "call") <- match.call()
+        attr(LL, "nobs") <- n
         if (model == "bsplines") {
             attr(LL, "degree") <- degree
             attr(LL, "nknots") <- nknots
@@ -68,18 +70,12 @@ coalescentMCMC <- function(x, ntrees = 3000, burnin = 1000, frequency = 1,
 
     if (is.null(tree0)) {
         d <- dist.dna(x, "JC69")
-        ## <FIXME> REMPLACER par upgma() et ajuster NAMESPACE
-        tree0 <- as.phylo(hclust(d, "average"))
-        ## </FIXME>
+        tree0 <- upgma(d, "average")
     }
 
-    ## <FIXME> preciser dans page d'aide
-    X <- if (inherits(x, "phyDat")) X else phyDat(x)
-    ## </FIXME>
+    X <- if (inherits(x, "phyDat")) x else phyDat(x)
     n <- length(tree0$tip.label)
     nodeMax <- 2*n - 1
-    nOut <- ntrees
-    nOut2 <- ntrees * frequency + burnin
 
     ## log-lik of the tree given the genetic data
     getlogLik <- function(phy, X) pml(phy, X)$logLik
@@ -99,8 +95,8 @@ coalescentMCMC <- function(x, ntrees = 3000, burnin = 1000, frequency = 1,
         }
     }
 
-    TREES <- vector("list", nOut)
-    LL <- numeric(nOut2)
+    TREES <- vector("list", ntrees)
+    LL <- LLmod <- numeric(ntrees)
     TREES[[1L]] <- tree0
     lnL0 <- getlogLik(tree0, X)
     LL[1L] <- lnL0
@@ -111,54 +107,55 @@ coalescentMCMC <- function(x, ntrees = 3000, burnin = 1000, frequency = 1,
     ## lo: lower bounds of these parameters (except for "constant" model)
     ##     for nlminb()
     ## up: id. for the upper bounds
-    ## getparams: a function that returns the coalescent parameters given a
-    ##            tree.............
+    ## getparams: a function that returns the coalescent parameters and
+    ##            the log-likelihood given the coalescent times (bt)
 
     switch(model, constant = {
         np <- 1L
         para.nms <- "theta"
         ## quantities to calculate THETA:
-        two2n <- 2:n
-        K4theta <- n - 1L
-        tmp <- two2n * (two2n - 1)/2 # choose(two2n, 2)
-        getparams <- function(phy, bt) {
-            x4theta <- rev(diff(c(0, sort(bt))))
-            sum(x4theta * tmp)/K4theta
+        n2two <- n:2
+        Ncomb <- n2two * (n2two - 1)/2 # choose(two2n, 2)
+        getparams <- function(bt) {
+            x <- diff(c(0, sort(bt)))
+            par <- sum(x * Ncomb)/(n - 1)
+            obj <- sum(log(Ncomb)) - (n - 1) * log(par) - sum(x * Ncomb)/par
+            list(par = par, objective = -obj)
         }
     }, time = {
         np <- 2L
         para.nms <- c("theta0", "rho")
-        lo <- c(0, -100)
-        up <- c(100, 100)
-        getparams <- function(phy, bt) { # 'bt' is not used but is needed to have the same arguments than above
+        getparams <- function(bt) {
             halfdev <- function(p) {
                 if (any(is.nan(p))) return(1e100)
-                -dcoal.time(phy, p[1], p[2], log = TRUE)
+                -dcoal.time(bt, p[1], p[2], log = TRUE)
             }
-            out <- nlminb(c(0.02, 0), halfdev, lower = lo, upper = up)
-            out$par
+            lo <- c(1e-8, -1000)
+            up <- c(100, 1000)
+            out <- nlminb(c(0.02, 0.1), halfdev, lower = lo, upper = up)
+            out[c("par", "objective")]
         }
     }, step = {
         np <- 3L
         para.nms <- c("theta0", "theta1", "tau")
-        getparams <- function(phy, bt) {
+        getparams <- function(bt) {
             halfdev <- function(p) {
                 if (any(p <= 0) || any(is.nan(p))) return(1e100)
-                -dcoal.step(phy, p[1], p[2], p[3], log = TRUE)
+                -dcoal.step(bt, p[1], p[2], p[3], log = TRUE)
             }
             out <- nlminb(c(0.02, 0.02, bt[1]/2), halfdev)
-            out$par
+            out[c("par", "objective")]
         }
     }, linear = {
-        np <- 3L
-        para.nms <- c("theta0", "thetaT", "TMRCA")
-        getparams <- function(phy, bt) {
+        np <- 2L
+        para.nms <- c("theta0", "thetaT")
+        getparams <- function(bt) {
             halfdev <- function(p) {
                 if (any(p <= 0) || any(is.nan(p))) return(1e100)
-                -dcoal.linear(phy, p[1], p[2], p[3], log = TRUE)
+                -dcoal.linear(bt, p[1], p[2], log = TRUE)
             }
-            out <- nlminb(c(0.02, 0.02, bt[1]), halfdev)
-            out$par
+            out <- nlminb(c(0.02, 0.02), halfdev)
+            out[c("par", "objective")]
         }
     }, bsplines = {
         free.knot.times <- TRUE
@@ -169,7 +166,7 @@ coalescentMCMC <- function(x, ntrees = 3000, burnin = 1000, frequency = 1,
         np <- nknots + degree + 1L
         if (free.knot.times) np <- np + nknots
         para.nms <- paste0("b", 1:np)
-        getparams <- function(phy, bt) {
+        getparams <- function(bt) {
             up <- rep(1e3, np)
             lo <- -up
             if (nknots) {
@@ -188,39 +185,37 @@ coalescentMCMC <- function(x, ntrees = 3000, burnin = 1000, frequency = 1,
                     knots <- NULL
                     beta <- p
                 }
-                -dcoal.bsplines(phy, beta, knots = knots, degree = degree, log = TRUE, bt)
+                -dcoal.bsplines(bt, beta, knots = knots, degree = degree, log = TRUE)
             }
             out <- nlminb(ip, halfdev, lower = lo, upper = up)
-            out$par
+            out[c("par", "objective")]
         }
     })
 
-    params <- matrix(0, nOut2, np)
+    params <- matrix(0, ntrees, np)
 
-    i <- 2L
+    i <- 2L # number of sampled trees = number of generations
     j <- 0L # number of accepted moves
-    k <- 0L # number of sampled trees
 
     if (verbose) {
         cat("Running the Markov chain:\n")
-        cat("  Number of trees to output:", ntrees, "\n")
-        cat("  Burn-in period:", burnin, "\n")
-        cat("  Sampling frequency:", frequency, "\n")
-        cat("  Number of generations to run:", ntrees * frequency + burnin, "\n")
+        cat("  Number of generations to run:", ntrees, "\n")
         cat("Generation    Nb of accepted moves\n")
     }
 
-    bt0 <- branching.times(tree0)
-    params[1L, ] <- para0 <- getparams(tree0, bt0)
+    bt0 <- .branching_times(tree0)
+    fitcoal <- getparams(bt0)
+    params[1L, ] <- para0 <- fitcoal$par
+    LLmod[1L] <- fitcoal$objective
 
     getTHETAct <- function(phy, n, bt0) {
-        x4theta <- rev(diff(c(0, sort(bt0))))
-        tmp <- (2:n) * (2:n - 1)/2
-        K4theta <- n - 1L
-        sum(x4theta * tmp)/K4theta
+        x <- diff(c(0, sort(bt0)))
+        n2two <- n:2
+        Ncomb <- n2two * (n2two - 1)/2
+        sum(x * Ncomb)/(n - 1)
     }
 
-    while (k < nOut) {
+    while (i <= ntrees) {
         if (verbose) if (! i %% printevery)
             cat("\r  ", i, "                ", j, "           ")
 
@@ -235,15 +230,13 @@ coalescentMCMC <- function(x, ntrees = 3000, burnin = 1000, frequency = 1,
                        subtreeExchange(tree0, n, bt0),
                        NodeAgeMove(tree0, n, bt0))
 
-        if (!(i %% frequency) && i > burnin) {
-            k <- k + 1L
-            TREES[[k]] <- tr.b
-        }
+        TREES[[i]] <- tr.b
         LL[i] <- lnL.b <- getlogLik(tr.b, X)
         ## calculate theta for the proposed tree:
-        bt <- branching.times(tr.b)
-        params[i, ] <- para <- getparams(tr.b, bt)
-        i <- i + 1L
+        bt <- .branching_times(tr.b)
+        fitcoal <- getparams(bt)
+        params[i, ] <- para <- fitcoal$par
+        LLmod[i] <- fitcoal$objective
         ACCEPT <- if (is.na(lnL.b)) FALSE else {
             if (lnL.b >= lnL0) TRUE
             else rbinom(1, 1, exp(lnL.b - lnL0))
@@ -255,6 +248,7 @@ coalescentMCMC <- function(x, ntrees = 3000, burnin = 1000, frequency = 1,
             para0 <- para
             bt0 <- bt
         }
+        i <- i + 1L
     }
     if (verbose) cat("\nDone.\n")
 }
@@ -322,4 +316,64 @@ getMCMCstats <- function()
 {
     cat("MCMC chain summaries (chains as columns):\n\n")
     get("MCMCstats", envir = .coalescentMCMCenv)
+}
+
+logLik.coalescentMCMC <- function(object, ...)
+{
+    model <- attr(object, "model")
+    if (model == "bsplines") {
+        degree <- attr(object, "degree")
+        knots <- attr(object, "knots")
+    }
+
+    if (model == "bsplines") {
+        beta <- vector("list", nrow(object))
+        for (i in 1:nrow(object)) beta[[i]] <- object[i, -1]
+    }
+    para.nms <- colnames(object)[-(1:2)]
+    res <- object[, "logLik.coal"]
+    attributes(res) <- NULL
+    ##if (useWeights) {
+    ##    w <- object[, "logLik.tree"]
+    ##    attributes(w) <- NULL
+    ##    w <- w - min(w) + 1e-8 # all w > 0
+    ##    w <- length(res)*w/sum(w) # sum(w) = length(res)
+    ##    res <- w * res
+    ##}
+    attr(res, "nobs") <- attr(object, "nobs")
+    attr(res, "df") <- length(para.nms) # number of parameters
+    class(res) <- c("logLik")
+    res
+}
+
+AIC.coalescentMCMC <- function(object, ..., k = 2)
+{
+    mod <- c(list(object), list(...))
+    ll <- lapply(mod, logLik.coalescentMCMC)
+    df <-  sapply(ll, attr, "df")
+    -2 * sapply(ll, mean) + k * df
+}
+
+BIC.coalescentMCMC <- function(object, ...)
+{
+    mod <- c(list(object), list(...))
+    ll <- lapply(mod, logLik.coalescentMCMC)
+    df <-  sapply(ll, attr, "df")
+    nobs <-  sapply(ll, attr, "nobs")
+    -2 * sapply(ll, mean) + df * nobs
+}
+
+anova.coalescentMCMC <- function(object, ...)
+{
+    mod <- c(list(object), list(...))
+    ll <- lapply(mod, logLik.coalescentMCMC)
+    df <- sapply(ll, attr, "df")
+    ll <- sapply(ll, mean)
+    dev <- c(NA, 2 * diff(ll)) # LRT's
+    ddf <- c(NA, diff(df))
+    res <- data.frame(ll, df, ddf, dev, pchisq(dev, ddf, lower.tail = FALSE))
+    dimnames(res) <- list(1:length(mod),
+                          c("Log lik.", "Resid. df", "df", "Chisq", "Pr(>|Chi|)"))
+    structure(res, heading = "Likelihood Ratio Test Table",
+              class = c("anova", "data.frame"))
 }

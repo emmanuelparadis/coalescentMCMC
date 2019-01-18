@@ -1,4 +1,4 @@
-## treeOperators.R (2019-01-16)
+## treeOperators.R (2019-01-17)
 
 ##   Trees Operators for Running MCMC
 
@@ -6,6 +6,12 @@
 
 ## This file is part of the R-package `coalescentMCMC'.
 ## See the file ../COPYING for licensing issues.
+
+.branching_times <- function(phy)
+{
+    phy <- reorder(phy)
+    .Call(branchingTimesCall, phy$edge,  phy$edge.length)
+}
 
 NeighborhoodRearrangement <- function(phy, n, THETA, brtimes)
 {

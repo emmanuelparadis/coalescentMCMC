@@ -4,7 +4,7 @@ Date: 2019-01-16
 Title: MCMC Algorithms for the Coalescent
 Authors@R: c(person("Emmanuel", "Paradis", role = c("aut", "cre", "cph"), email = "Emmanuel.Paradis@ird.fr"))
 Depends: ape, coda, lattice
-Imports: Matrix, phangorn, stats
+Imports: Matrix, phangorn, splines, stats
 ZipData: no
 Description: Flexible framework for coalescent analyses in R. It includes a main function running the  MCMC algorithm, auxiliary functions for tree rearrangement, and some functions to compute population genetic parameters.
 License: GPL (>= 2)
