@@ -1,4 +1,4 @@
-## coalescentMCMC.R (2019-01-29)
+## coalescentMCMC.R (2019-01-30)
 
 ##   Run MCMC for Coalescent Trees
 
@@ -206,9 +206,9 @@ coalescentMCMC <- function(x, ntrees = 3000, model = "constant",
     bt0 <- .branching_times(tree0)
     fitcoal <- getparams(bt0)
     params[1L, ] <- para0 <- fitcoal$par
-    LLmod[1L] <- fitcoal$objective
+    LLmod[1L] <- lnLcoal0 <- fitcoal$objective
 
-    getTHETAct <- function(phy, n, bt0) {
+    getTHETAct <- function(n, bt0) {
         x <- diff(c(0, sort(bt0)))
         n2two <- n:2
         Ncomb <- n2two * (n2two - 1)/2
@@ -221,7 +221,7 @@ coalescentMCMC <- function(x, ntrees = 3000, model = "constant",
 
         move <- sample(moves, 1L)
         if (move == 1)
-            THETA <- ifelse(model == "constant", para0, getTHETAct(tree0, n, bt0))
+            THETA <- ifelse(model == "constant", para0, getTHETAct(n, bt0))
         tr.b <- switch(move,
                        NeighborhoodRearrangement(tree0, n, THETA, bt0),
                        TipInterchange(tree0, n),
@@ -236,14 +236,17 @@ coalescentMCMC <- function(x, ntrees = 3000, model = "constant",
         bt <- .branching_times(tr.b)
         fitcoal <- getparams(bt)
         params[i, ] <- para <- fitcoal$par
-        LLmod[i] <- fitcoal$objective
-        ACCEPT <- if (is.na(lnL.b)) FALSE else {
-            if (lnL.b >= lnL0) TRUE
-            else rbinom(1, 1, exp(lnL.b - lnL0))
+        LLmod[i] <- lnLcoal.b <- fitcoal$objective
+        if (is.na(lnL.b) || is.na(lnLcoal.b)) {
+            ACCEPT <- FALSE
+        } else {
+            R <- lnL.b + lnLcoal.b - lnL0 - lnLcoal0
+            ACCEPT <- if (R >= 0) TRUE else rbinom(1, 1, exp(R))
         }
         if (ACCEPT) {
             j <- j + 1L
             lnL0 <- lnL.b
+            lnLcoal0 <- lnLcoal.b
             tree0 <- tr.b
             para0 <- para
             bt0 <- bt
@@ -382,16 +385,19 @@ subset.coalescentMCMC <- function(x, burnin = 1000, thinning = 10, end = NULL, .
 {
     oc <- oldClass(x)
     class(x) <- NULL
-    mcpar <- attr(x, "mcpar")
-    model <- attr(x, "model")
-    nobs <- attr(x, "nobs")
+    attr.x <- attributes(x)
+    mcpar <- attr.x$mcpar
+    attr.x$old.call <- attr.x$call
+    attr.x$call <-  match.call()
+
     if (mcpar[2] < burnin)
         stop("'burnin' longer than the number of generations")
     from <- burnin + 1
     n <- nrow(x)
     if (!is.null(end)) {
+        if (end < from) stop("argument 'end' too small")
         if (end > n) {
-            warning("argument 'end' greater than the number of generations: it wasignored")
+            warning("argument 'end' greater than the number of generations: it was ignored")
             end <- n
         }
     } else  end <- n
@@ -399,14 +405,13 @@ subset.coalescentMCMC <- function(x, burnin = 1000, thinning = 10, end = NULL, .
     if (thinning > 1) {
         i <- seq(thinning, nrow(x), thinning)
         x <- x[i, , drop = FALSE]
-#        mcpar[c(1, 3)] <- thinning
+        ## mcpar[c(1, 3)] <- thinning
     }
+
     mcpar[2] <- nrow(x)
-    attr(x, "mcpar") <- mcpar
+    attr.x$mcpar <- mcpar
+    attr.x$dim <- dim(x)
+    attributes(x) <- attr.x
     class(x) <- oc
-    attr(x, "old.call") <- attr(x, "call")
-    attr(x, "model") <- model
-    attr(x, "call") <- match.call()
-    attr(x, "nobs") <- nobs
     x
 }
