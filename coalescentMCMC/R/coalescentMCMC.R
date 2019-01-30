@@ -1,4 +1,4 @@
-## coalescentMCMC.R (2019-01-18)
+## coalescentMCMC.R (2019-01-29)
 
 ##   Run MCMC for Coalescent Trees
 
@@ -130,7 +130,7 @@ coalescentMCMC <- function(x, ntrees = 3000, model = "constant",
                 if (any(is.nan(p))) return(1e100)
                 -dcoal.time(bt, p[1], p[2], log = TRUE)
             }
-            lo <- c(1e-8, -1000)
+            lo <- c(1e-8, -1e6)
             up <- c(100, 1000)
             out <- nlminb(c(0.02, 0.1), halfdev, lower = lo, upper = up)
             out[c("par", "objective")]
@@ -376,4 +376,37 @@ anova.coalescentMCMC <- function(object, ...)
                           c("Log lik.", "Resid. df", "df", "Chisq", "Pr(>|Chi|)"))
     structure(res, heading = "Likelihood Ratio Test Table",
               class = c("anova", "data.frame"))
+}
+
+subset.coalescentMCMC <- function(x, burnin = 1000, thinning = 10, end = NULL, ...)
+{
+    oc <- oldClass(x)
+    class(x) <- NULL
+    mcpar <- attr(x, "mcpar")
+    model <- attr(x, "model")
+    nobs <- attr(x, "nobs")
+    if (mcpar[2] < burnin)
+        stop("'burnin' longer than the number of generations")
+    from <- burnin + 1
+    n <- nrow(x)
+    if (!is.null(end)) {
+        if (end > n) {
+            warning("argument 'end' greater than the number of generations: it wasignored")
+            end <- n
+        }
+    } else  end <- n
+    x <- x[from:end, , drop = FALSE]
+    if (thinning > 1) {
+        i <- seq(thinning, nrow(x), thinning)
+        x <- x[i, , drop = FALSE]
+#        mcpar[c(1, 3)] <- thinning
+    }
+    mcpar[2] <- nrow(x)
+    attr(x, "mcpar") <- mcpar
+    class(x) <- oc
+    attr(x, "old.call") <- attr(x, "call")
+    attr(x, "model") <- model
+    attr(x, "call") <- match.call()
+    attr(x, "nobs") <- nobs
+    x
 }

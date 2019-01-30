@@ -1,4 +1,4 @@
-## plotTHETA.R (2019-01-18)
+## plotTHETA.R (2019-01-28)
 
 ##   Plot THETA From coalescentMCMC Output
 
@@ -106,7 +106,7 @@ plotTHETA <- function(x, phy, add = FALSE, rightwards = TRUE, col = "blue",
         }
     }
 
-    if (model == "time") {
+    if (model == "time" || model == "bsplines") {
         if (x.scale != 1) t <- x.scale * t
         if (y.scale != 1) Y <- y.scale * Y
         if (rightwards) t <- -t
