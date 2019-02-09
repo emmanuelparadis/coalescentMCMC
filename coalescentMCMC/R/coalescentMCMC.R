@@ -1,4 +1,4 @@
-## coalescentMCMC.R (2019-01-30)
+## coalescentMCMC.R (2019-02-01)
 
 ##   Run MCMC for Coalescent Trees
 
@@ -208,8 +208,8 @@ coalescentMCMC <- function(x, ntrees = 3000, model = "constant",
     params[1L, ] <- para0 <- fitcoal$par
     LLmod[1L] <- lnLcoal0 <- fitcoal$objective
 
-    getTHETAct <- function(n, bt0) {
-        x <- diff(c(0, sort(bt0)))
+    getTHETAct <- function(n, bt) {
+        x <- diff(c(0, sort(bt)))
         n2two <- n:2
         Ncomb <- n2two * (n2two - 1)/2
         sum(x * Ncomb)/(n - 1)
@@ -230,17 +230,17 @@ coalescentMCMC <- function(x, ntrees = 3000, model = "constant",
                        subtreeExchange(tree0, n, bt0),
                        NodeAgeMove(tree0, n, bt0))
 
-        TREES[[i]] <- tr.b
-        LL[i] <- lnL.b <- getlogLik(tr.b, X)
-        ## calculate theta for the proposed tree:
+        lnL.b <- getlogLik(tr.b, X)
+        ## calculate coalescent parameters for the proposed tree:
         bt <- .branching_times(tr.b)
         fitcoal <- getparams(bt)
-        params[i, ] <- para <- fitcoal$par
-        LLmod[i] <- lnLcoal.b <- fitcoal$objective
+        para <- fitcoal$par
+        lnLcoal.b <- fitcoal$objective
         if (is.na(lnL.b) || is.na(lnLcoal.b)) {
             ACCEPT <- FALSE
         } else {
-            R <- lnL.b + lnLcoal.b - lnL0 - lnLcoal0
+            ## R <- lnL.b + lnLcoal.b - lnL0 - lnLcoal0
+            R <- lnL.b - lnL0
             ACCEPT <- if (R >= 0) TRUE else rbinom(1, 1, exp(R))
         }
         if (ACCEPT) {
@@ -251,6 +251,10 @@ coalescentMCMC <- function(x, ntrees = 3000, model = "constant",
             para0 <- para
             bt0 <- bt
         }
+        TREES[[i]] <- tree0
+        LL[i] <- lnL0
+        params[i, ] <- para0
+        LLmod[i] <- lnLcoal0
         i <- i + 1L
     }
     if (verbose) cat("\nDone.\n")

@@ -1,4 +1,4 @@
-## zzz.R (2019-01-16)
+## zzz.R (2019-02-01)
 
 ##   Library Loading
 
@@ -10,5 +10,5 @@
 .coalescentMCMCenv <- new.env()
 
 assign("MCMCstats",
-       data.frame(row.names = c("Number of generations", "Nb of accepted moves")),
+       data.frame(row.names = c("Nb of generations", "Nb of accepted moves")),
        envir = .coalescentMCMCenv)
