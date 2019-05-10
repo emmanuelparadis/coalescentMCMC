@@ -20,13 +20,13 @@
 options(width=60)
 @
 
-\noindent Coalescent analyses have emerged in the recent years as a
+\noindent Coalescent analysis is a
 powerful approach to investigate the demography of populations using
 genetic data. The coalescent is a random process describing the
 coalescent times of a genealogy with respect to population size and
 mutation rate. In the majority of cases, the genealogy of individuals
 within a population is unknown. So a coalescent analysis typically
-integrates over the ``likely'' genealogies to make inference on
+integrates over the likely genealogies to make inference on
 the dynamics of the population. This uses computer-intensive methods
 such as Monte Carlo simulations of Markov chains. Besides, if
 priors are defined on the distributions of the parameters, Bayesian
@@ -66,9 +66,10 @@ used.\footnote{Other models will be implemented later. See the
 vignette ``CoalescentModels''.} Finally, \code{printevery} is an integer
 controlling the print frequency of the progress of the chain.
 
-The current implementation uses only neighborhood rearrangement as
+The current implementation uses neighborhood rearrangement as
 proposed in \cite{Kuhner1995} calling the function
-\code{NeighborhoodRearrangement} at each step of the chain. This can
+\code{NeighborhoodRearrangement} at each step of the chain. Five other
+tree moves are availables taken from \cite{Drummond2002}. This can
 modified by using other functions described in \code{?treeOperators}.
 
 Let us now consider a very simple analysis with the woodmouse data

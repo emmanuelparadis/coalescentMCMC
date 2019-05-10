@@ -1,17 +1,35 @@
-		CHANGES IN coalescentMCMC VERSION 0.4-3
+		CHANGES IN coalescentMCMC VERSION 0.5
 
 
 NEW FEATURES
 
+    o coalescentMCMC() now returns an object of class
+      c("coalescentMCMC", "coda").
+
+    o Five more "tree moves" are now available during the MCMCs. These
+      moves are from Drummond et al. 2002 (Genetics, 161:1307).
+
+    o There are methods logLik, anova, AIC, and BIC for the class
+      "coalescentMCMC".
+
+    o The new function plotTHETA plots the variation in THETA
+      predicted from an output of coalescentMCMC() and a set of trees.
+
     o The new function proba.coalescent calculates probabilities of
       coalescence using exact or approximate formula.
 
-    o The new function subset.coalescentMCMC........
+    o The new function subset.coalescentMCMC makes possible to extract
+      flexibly a subset from an output of coalescentMCMC().
+
+    o coalescentMCMC() has a new model "bsplines".
 
 
 BUG FIXES
 
     o A bug was fixed in the calculations of coalescent pdfs.
+
+    o Some bugs were fixed in coalescentMCMC(). The code is also
+      faster.
 
 
 OTHER CHANGES

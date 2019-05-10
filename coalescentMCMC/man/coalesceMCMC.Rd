@@ -1,42 +1,23 @@
 \name{coalescentMCMC}
 \alias{coalescentMCMC}
-\alias{getMCMCtrees}
-\alias{saveMCMCtrees}
-\alias{cleanMCMCtrees}
-\alias{getLastTree}
-\alias{getMCMCstats}
 \alias{logLik.coalescentMCMC}
 \alias{AIC.coalescentMCMC}
 \alias{BIC.coalescentMCMC}
 \alias{anova.coalescentMCMC}
 \title{Run MCMC for Coalescent Trees}
 \description{
-  This function runs a Markov chain Monte Carlo (MCMC) algorithm to
-  generate a set of trees which is returned with their likelihoods.
+  These are the main function of the package to run a Markov chain Monte
+  Carlo (MCMC) to generate a set of trees which is returned with their
+  likelihoods, the coalescent likelihoods and the respective parameter(s).
 
-  \code{getMCMCtrees} extracts the trees from previous MCMC runs.
-
-  \code{saveMCMCtrees} saves the lists of trees from previous runs on
-  the user's hard disk.
-
-  \code{cleanMCMCtrees} deletes the lists of trees from previous runs
-  (the files possibly on the hard disk are not changed).
-
-  \code{getLastTree} extracts the last tree from a list of trees (object
-  of class \code{"multiPhylo"}).
-
-  \code{getMCMCstats} returns the summary data for the different chains
-  run during a session.
+  The \code{logLik} method returns the average log-likelihood of the
+  coalescent model. \code{AIC}, \code{BIC}, and \code{anova} use this
+  average log-likelihood.
 }
 \usage{
 coalescentMCMC(x, ntrees = 3000, model = "constant", tree0 = NULL,
                printevery = 100, degree = 1, nknots = 0,
                knot.times = NULL, moves = 1:6)
-getMCMCtrees(chain = NULL)
-saveMCMCtrees(destdir = ".", format = "RDS", ...)
-cleanMCMCtrees()
-getLastTree(X)
-getMCMCstats()
 \method{logLik}{coalescentMCMC}(object, ...)
 \method{AIC}{coalescentMCMC}(object, ..., k = 2)
 \method{BIC}{coalescentMCMC}(object, ...)
@@ -55,49 +36,35 @@ getMCMCstats()
     all printings.}
   \item{degree, nknots, knot.times}{parameters used if \code{model =
     "splines"}.}
-  \item{moves}{the tree moves used by the MCMC.}
-  \item{chain}{an integer giving which lists of trees to extract}
-  \item{destdir}{a character string giving the location where to save
-    the files; by default, this is the current working directory.}
-  \item{format}{the format of the tree files. Three choices are
-    possible (cae-insensitive): \code{"RDS"}, \code{"Newick"},
-    \code{"NEXUS"}, or any unambiguous abbreviation of these.}
-  \item{\dots}{options passed to the function used to write the tree
-    files (see below) or passed to other methods.}
-  \item{X}{an bject of class \code{"multiPhylo"}.}
+  \item{moves}{the tree moves used by the MCMC (see details).}
+  \item{\dots}{options passed to other methods.}
   \item{object}{an bject of class \code{"coalescentMCMC"}.}
   \item{k}{the coefficient used to calculate the AIC (see
     \code{\link[stats]{AIC}}).}
 }
 \details{
-  A simple MCMC algorithm is programmed using at each step the
-  ``neighborhood rearrangement'' operation (Kuhner et al., 1995) and
-  Hastings's ratio for acceptance/rejection of the proposed tree.
-
-  The number of generations of the chain is determined by: `frequency'
-  times `ntrees' plus `burnin'. Only the `ntrees' trees are output
-  whereas all the log-likelihood values are output.
-
-  The list of trees is returned in a specific environment and can be
-  extracted with \code{getMCMCtrees}.
-
-  \code{saveMCMCtrees} saves the files with, by default, the RDS format
-  using \code{\link[base]{saveRDS}}. If \code{format = "Newick"},
-  \code{\link[ape]{write.tree}} is used.; if \code{format = "NEXUS"},
-  \code{\link[ape]{write.nexus}} is used. Options can be passed to any
-  of these functions with \code{\dots}.
-
-  \code{getLastTree(X)} is a short-cut to \code{X[[length(X)]]}.
+  Six tree moves are programmed and one is chosen randomly at each step
+  of the MCMC. The steps are: (1) NeighborhoodRearrangement (Kuhner et
+  al., 1995), (2) ScalingMove, (3) branchSwapping, (4) subtreeExchange,
+  (5) NodeAgeMove, and (6) randomWalkThetaMu (all five from Drummond et
+  al., 2002). In practice, it appears that in many situations
+  \code{moves = c(1, 3)} is a good selection resulting in around 50\% acceptance rate.
 }
 \value{
-  \code{coalescentMCMC} returns an object of class \code{"coda"} with
-  the log-likelihood and the parameters of each tree.
+  \code{coalescentMCMC} returns an object of class
+  \code{c("coalescentMCMC", "coda")} with the log-likelihood and the
+  parameters of each tree.
 
-  \code{getLastTree} returns an object of class \code{"phylo"}.
+  \code{logLik}, \code{AIC} and \code{BIC} return a numeric vector.
 
-  \code{getMCMCstats} returns a data frame.
+  \code{anova} return an object of class \code{"anova"}.
 }
 \references{
+  Drummond, A. J., Nicholls, G. K., Rodrigo, A. G. and Solomon,
+  W. (2002) Estimating mutation parameters, population history and
+  genealogy simultaneously from temporally spaced sequence
+  data. \emph{Genetics}, \bold{161}, 1307--1320.
+
   Hastings, W. K. (1970) Monte Carlo sampling methods using Markov
   chains and their applications. \emph{Biometrika}, \bold{57}, 97--109.
 
@@ -107,7 +74,7 @@ getMCMCstats()
 }
 \author{Emmanuel Paradis}
 \seealso{
-  \code{\link{dcoal}}, \code{\link{treeOperators}}
+  \code{\link{getMCMCtrees}}, \code{\link{dcoal}}, \code{\link{treeOperators}}
 }
 \examples{
 \dontrun{
